@@ -8,6 +8,7 @@ services:
     ports:
       - "5432:5432"
     restart: always
+    container_name: django_mine_db
 
   web:
     build: .
@@ -23,3 +24,4 @@ services:
     depends_on:
       - db
     restart: always
+    container_name: django_mine_web

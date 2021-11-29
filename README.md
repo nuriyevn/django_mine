@@ -16,6 +16,7 @@ if your Django version is 1.9 or lower, use
 then
 
 python manage.py createsuperuser
+admin:C....4...
 
 
 

@@ -23,5 +23,19 @@ tutorial:
 
 https://docs.djangoproject.com/en/3.2/intro/tutorial02/
 tutorial 2:
+https://www.enterprisedb.com/postgres-tutorials/how-use-postgresql-django
+
+
+Create user:
+
+
+CREATE DATABASE minebase;
+CREATE USER mineuser WITH PASSWORD '.8.2.';
+ALTER ROLE mineuser SET client_encoding TO 'utf8'; 
+ALTER ROLE mineuser SET default_transaction_isolation TO 'read committed'; 
+ALTER ROLE mineuser SET timezone TO 'Europe/Helsinki';
+
+GRANT ALL PRIVILEGES ON DATABASE minebase TO mineuser;
+\q
 
 

@@ -23,13 +23,12 @@ def index(request):
             resp = requests.get(miner_url, headers=headers)
             obj = json.loads(resp.content)
             html +=  '<a href="' + url + '">' + instance.name + '</a> - <a href="' + miner_url + '">' + miner_url + '</a>' + str(headers) +';' + miner_url + ' status = ' + str(obj['hashrate']) +   '<br>'
-            total_all['10s'] += obj['hashrate']['total'][0]
-            total_all['60s'] += obj['hashrate']['total'][1]
-            total_all['15m'] += obj['hashrate']['total'][2]
-
-
- 
-            
+            if obj['hashrate']['total'][0] is not None:
+                total_all['10s'] += obj['hashrate']['total'][0]
+            if obj['hashrate']['total'][1] is not None:
+                total_all['60s'] += obj['hashrate']['total'][1]
+            if obj['hashrate']['total'][2] is not None:
+                total_all['15m'] += obj['hashrate']['total'][2]
         except Exception as err:
            html +=  '<a href="' + url + '">' + instance.name + '</a> - <a href="' + miner_url + '">' + miner_url + '</a>' + str(headers) +';' + miner_url + ' status = ' + str(err) + '<br>'
     for i in total_all:

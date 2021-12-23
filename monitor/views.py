@@ -1,71 +1,160 @@
+import requests,json
 from django.http import HttpResponse
 from .models import Instance
-import requests, json
-import threading
-
-# responses = []
-miner_api_port = 9000
-miner_api_summary = '/2/summary'
-token = 'newtoken'
-headers = {'Authorization': 'Bearer ' + token}
-threadLock = threading.Lock()  # TODO
+import math
+from queue import Queue
+from threading import Thread
+import time
 
 
-class myThread(threading.Thread):
-    def __init__(self, threadID, instance_name, url, miner_url, html):
-        threading.Thread.__init__(self)
-        self.threadID = threadID
-        self.url = url
-        self.miner_url = miner_url
-        self.instance_name = instance_name
-        self.html = html
+class Worker(Thread):
+    """ Thread executing tasks from a given tasks queue """
+
+    def __init__(self, tasks):
+        Thread.__init__(self)
+        self.tasks = tasks
+        self.daemon = True
+        self.start()
 
     def run(self):
-        print("Starting " + self.url)
-        try:
-            resp = requests.get(self.miner_url, headers=headers)
-            obj = json.loads(resp.content)
-            threadLock.acquire()
-            self.html += '<a href="' + self.url + '">' + self.instance_name + '</a> - <a href="' + \
-                         self.miner_url + '">' + self.miner_url + '</a>' + str(headers) + ';' + self.miner_url + \
-                         ' status = ' + str(obj['hashrate']) + '<br>'
-            threadLock.release()
-        except Exception as err:
-            threadLock.acquire()
-            self.html += '<a href="' + self.url + '">' + self.instance_name + '</a> - <a href="' + \
-                         self.miner_url + '">' + self.miner_url + '</a>' + str(headers) + ';' + self.miner_url + \
-                         ' status = ' + str(err) + '<br>'
-            threadLock.release()
+        while True:
+            func, args, kargs = self.tasks.get()
+            try:
+                func(*args, **kargs)
+            except Exception as e:
+                # An exception happened in this thread
+                print(e)
+            finally:
+                # Mark this task as done, whether an exception happened or not
+                self.tasks.task_done()
 
-        # Get lock to synchronize threads
-        # threadLock.acquire()
-        # print_time(self.name, self.counter, 3)
-        # Free lock to release next thread
-        # threadLock.release()
 
-def index(request):
+class ThreadPool:
+    """ Pool of threads consuming tasks from a queue """
+
+    def __init__(self, num_threads):
+        self.tasks = Queue(num_threads)
+        for _ in range(num_threads):
+            Worker(self.tasks)
+
+    def add_task(self, func, *args, **kargs):
+        """ Add a task to the queue """
+        self.tasks.put((func, args, kargs))
+
+    def map(self, func, args_list):
+        """ Add a list of tasks to the queue """
+        for args in args_list:
+            self.add_task(func, args)
+
+    def wait_completion(self):
+        """ Wait for completion of all the tasks in the queue """
+        self.tasks.join()
+
+
+def get(url):
+    i = url.split('/')[-1]
+    r = session.get(url, headers={'Authorization': 'Bearer newtoken'})
+    results[i] = r.json()
+    print(url + " " + str(results[i]['hashrate']))
+
+
+responses = []
+
+miner_url = 'http://'
+miner_api_port = 9000
+miner_api_summary = '/2/summary'
+token='newtoken'
+
+
+session = requests.session()
+results = {}
+
+
+async def index(request):
     all_instances = Instance.objects.all()
     html = ''
-    threads = []
-
+    total_all = {'10s': 0, '60s': 0, '15m': 0 }
+    
+    urls = []
     for instance in all_instances:
-        miner_url = 'http://' + str(instance.local_ip) + ':' + str(miner_api_port) + str(miner_api_summary)
         url = '/monitor/' + str(instance.id) + '/'
-        print('Creating ' + str(instance.id))
-        thread = myThread(instance.id, instance.name, url, miner_url, html)
-        print('Starting ' + str(instance.id))
-        thread.start()
-        print('Appending ' + str(instance.id))
-        threads.append(thread)
+        miner_url = 'http://' + str(instance.local_ip) + ':' + str(miner_api_port) + str(miner_api_summary)
+        #headers = {'Authorization':'Bearer ' + token }
+        
+        urls.append(url)
+        
+        '''
+        try:
+            resp = requests.get(miner_url, headers=headers)
+            obj = json.loads(resp.content)
+            html +=  '<a href="' + url + '">' + instance.name + '</a> - <a href="' + miner_url + '">' + miner_url + '</a>' + str(headers) +';' + miner_url + ' status = ' + str(obj['hashrate']) +   '<br>'
+            if obj['hashrate']['total'][0] is not None:
+                total_all['10s'] += obj['hashrate']['total'][0]
+            if obj['hashrate']['total'][1] is not None:
+                total_all['60s'] += obj['hashrate']['total'][1]
+            if obj['hashrate']['total'][2] is not None:
+                total_all['15m'] += obj['hashrate']['total'][2]
+        except Exception as err:
+           html +=  '<a href="' + url + '">' + instance.name + '</a> - <a href="' + miner_url + '">' + miner_url + '</a>' + str(headers) +';' + miner_url + ' status = ' + str(err) + '<br>'
+        '''
 
-    for t in threads:
-        print('Joining ' + str(t.threadID))
-        t.join()
-    print("Exiting index")
+    #urls = [f"http://192.168.1.{i}:9000/2/summary" for i in range(100, 126)]
 
-    print('html ' + str(html))
+    pool = ThreadPool(25)
+    #results = {}
+    #session = requests.session()
+
+
+    now = time.time()
+    pool.map(get, urls)
+    pool.wait_completion()
+    time_taken = time.time() - now
+
+    print(time_taken)
+
+    '''
+    for i in total_all:
+        total_all[i] = str(math.floor(float(total_all[i])))
+    html += '<br>' + str(total_all)
+    '''
     return HttpResponse(html)
 
 
 def detail(request, instance_id):
-    return HttpResponse("<h2>Details for Album id" + str(instance_id) + "</h2>")
+    instance = Instance.objects.get(id=instance_id)
+    miner_url = 'http://' + str(instance.local_ip) + ':' + str(miner_api_port) + str(miner_api_summary)
+    headers = {'Authorization':'Bearer ' + token }
+    resp = requests.get(miner_url, headers=headers)
+    return HttpResponse("<h2>Details for Album id" + str(instance_id) + "</h2><pre>" + resp.text + "</pre>")
+
+
+
+def old(request):
+    all_instances = Instance.objects.all()
+    html = ''
+    miner_url = 'http://'
+    miner_api_port = 9000
+    miner_api_summary = '/2/summary'
+    token='newtoken'
+    total = {'10s':0, '1m':0, '15m':0}
+    for instance in all_instances:
+        url = '/monitor/' + str(instance.id) + '/'
+        miner_url = 'http://' + str(instance.local_ip) + ':' + str(miner_api_port) + str(miner_api_summary)
+        headers = {'Authorization':'Bearer ' + token }
+        try:
+            resp = requests.get(miner_url, headers=headers)
+            obj = json.loads(resp.content)
+            html +=  '<a href="' + url + '">' + instance.name + '</a> - <a href="' + miner_url + '">' + miner_url + '</a>' + ' status = ' + str(obj['hashrate']) +   '<br>'
+            total['10s'] += obj['hashrate']['total'][0]
+            total['1m'] += obj['hashrate']['total'][1]
+            total['15m'] += obj['hashrate']['total'][2]
+
+        except Exception as err:
+           html +=  '<a href="' + url + '">' + instance.name + '</a> - <a href="' + miner_url + '">' + miner_url + '</a>' + ' status = ' + str(err) + '<br>'
+    total = dict([a, int(x)] for a, x in total.items())  
+    html = html + "<pre>"+ str(total) + "</pre>"
+    return HttpResponse(html)
+
+
+def test(request):
+    return HttpReponse("<h1>test</h1>")

@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_q',
     'monitor.apps.MonitorConfig',
 ]
 
@@ -83,6 +84,34 @@ DATABASES = {
         'HOST': '194.0.52.235',
         'PORT': '5432',
     }
+}
+
+
+
+
+'''
+            'port': 27017,
+    }
+
+}
+'''
+
+Q_CLUSTER = {
+
+'name': 'myproject',
+    'workers': 8,
+    'recycle': 500,
+    'timeout': 60,
+    'compress': True,
+    'save_limit': 250,
+    'queue_limit': 500,
+    'cpu_affinity': 1,
+    'label': 'Django Q',
+    'redis': {
+        'host': '194.0.52.235',
+        'port': 6379,
+        'password':'HawGp8I6/GmNxrgK7GD8Ybs/sl7YGUfZdOS+K4WAJd7mZEf/xuxBW8Jh45bLkqbLNsbp95DNQIoZ0nrn',
+        'db': 0, }
 }
 
 

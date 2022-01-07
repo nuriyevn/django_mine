@@ -1,3 +1,13 @@
-Django>=3.0,<4.0
+django
 psycopg2>=2.8
 requests
+aiohttp
+aiodns
+brotlipy
+
+# anync stuff
+django_q
+# this is as a broker for djhango_q
+pymongo==3.11.3
+
+httpx

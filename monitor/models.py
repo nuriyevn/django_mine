@@ -7,7 +7,7 @@ class Instance(models.Model):
     name = models.TextField()
     mac = models.TextField()
     local_ip = models.TextField()
-    
+    enabled = models.BooleanField(default=True)
     def __str__(self):
         return self.name + ' - ' + self.mac + ' - ' + self.local_ip
 

@@ -2,6 +2,7 @@ from time import sleep
 from . import views 
 import requests,httpx,json
 from django.http import HttpResponseRedirect
+
 class Res:
     res = {}
     last_piece = False
@@ -23,19 +24,6 @@ def get_data(data):
         pass
     return all_data
 
-    #results[i] = r.json()
-    #print(url + " " + str(results[i]['hashrate']))
-
-def sleep_and_print(secs):
-    sleep(secs)
-    print("Task ran!")
-
-def hook_after_sleeping(task):
-    print(task.result)
-
-def geirt_data_hook(task):
-    print(task.result)
-
 def get_data_hook(task):
     #print("get_data_hook: Res=" + str(Res.res[Res.i]))
     #Res.res[Res.i] = task.result
@@ -43,14 +31,6 @@ def get_data_hook(task):
     #i = url.split('/')[-1]
     print("get_data_hook: task_result" + str(task.result)[0:220])
     print("get_data_hook: data request" + str(task.result['data']['request']))
-    
-
-    #request.build_absolute_uri('/monitor/refresh/')    
     HttpResponseRedirect('/monitor/refresh/')
     #views.refresh()
 
-def get_data_ho2ok(task):
-    Result.result[i] = task.result
-    print(task.result)
-    #i = i + 1
-    #refresh(Result.request)
